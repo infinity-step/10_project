@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
           export KUBECONFIG=kubeconfig.yaml
-          ERRORS=$(kubectl get pods -A --no-headers | awk '$4!="Running" {print $0}')
+          ERRORS=$(kubectl get pods -A --no-headers | awk '$4="Running" {print $0}')
           if [[ ! -z "$ERRORS" ]]; then
             curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Обнаружены проблемы с подами:\n$ERRORS\"}" $SLACK_WEBHOOK_URL
           fi
