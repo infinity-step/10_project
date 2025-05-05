@@ -25,14 +25,15 @@ jobs:
                 HostName ${{ secrets.SSH_PROXY_HOST }}
                 User ${{ secrets.SSH_USER }}
                 Port ${{ secrets.SSH_PORT }}
-                IdentityFile ~/.ssh/id_rsa
-                Host ${{ secrets.K8S_REMOTE_HOST }}
-                ProxyJump ec_bastion" > ~/.ssh/config
-          cat ~/.ssh/config
+                IdentityFile ~/.ssh/id_rsa"> ~/.ssh/config
+          echo "Host ${{ secrets.K8S_REMOTE_HOST }}
+                ProxyJump ec_bastion" >> ~/.ssh/config
 
       - name: Check pods status
         id: check-pods
         run: |
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_PROXY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
           ssh -o StrictHostKeyChecking=no ${{ secrets.K8S_REMOTE_HOST }} 'kubectl get pods -A' > pod_status.txt
           if grep -q 'CrashLoopBackOff\|Error' pod_status.txt; then
             echo "Pods in error state!"
