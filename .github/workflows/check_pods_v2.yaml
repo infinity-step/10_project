@@ -36,7 +36,8 @@ jobs:
       
       - name: Set tunnel
         run: |
-          ssh-keyscan ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_PROXY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p 22 ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
           ssh -o StrictHostKeyChecking=no -L 6443:127.0.0.1:6443 root@${{ secrets.K8S_REMOTE_HOST }} -f -N
 
       - name: Send notifications in Slack, if there are errors
