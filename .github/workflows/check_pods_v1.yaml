@@ -1,4 +1,4 @@
-name: Check pods status Kubernetes
+name: Check pods status Kubernetes v2
 
 on:
   workflow_dispatch:
@@ -24,30 +24,23 @@ jobs:
           echo "Host ec_bastion
                 HostName ${{ secrets.SSH_PROXY_HOST }}
                 User ${{ secrets.SSH_USER }}
-                Port ${{ secrets.SSH_PORT }}
-                IdentityFile ~/.ssh/id_rsa"> ~/.ssh/config
+                Port ${{ secrets.SSH_PORT }}"> ~/.ssh/config
           echo "Host ${{ secrets.K8S_REMOTE_HOST }}
                 ProxyJump ec_bastion" >> ~/.ssh/config
-
-      - name: Check pods status
-        id: check-pods
+      
+      - name: Set tunnel
         run: |
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_PROXY_HOST }} >> ~/.ssh/known_hosts
-          ssh-keyscan ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.K8S_REMOTE_HOST }} 'ls' > pod_status.txt
-          cat pod_status.txt
-          if grep -q 'CrashLoopBackOff\|Error' pod_status.txt; then
-            echo "Pods in error state!"
-            exit 1
-          fi
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_PROXY_HOST }} ssh-keyscan -p 22 ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
+          ssh -o StrictHostKeyChecking=no -L 6443:127.0.0.1:6443 root@${{ secrets.K8S_REMOTE_HOST }} -f -N
 
-      - name: Send notifications in Slack while error
-        if: failure()
-        uses: ravsamhq/notify-slack-action@v2
-        with:
-          status: ${{ job.status }}
-          notification_title: "Ошибка в {workflow}"
-          message_format: "{emoji} *{workflow}* завершился с ошибкой в <{repo_url}|{repo}>"
-          footer: "Подробнее: <{workflow_url}|Просмотр Workflow>"
+      - name: Send notifications in Slack, if there are errors
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+          ERRORS=$(kubectl get pods -A --no-headers | awk '$4!="Running" {print $0}')
+          if [[ ! -z "$ERRORS" ]]; then
+            curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Обнаружены проблемы с подами:\n$ERRORS\"}" $SLACK_WEBHOOK_URL
+          fi
