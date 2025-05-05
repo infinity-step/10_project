@@ -1,4 +1,4 @@
-name: Check pods status Kubernetes
+name: Check pods status Kubernetes v2
 
 on:
   workflow_dispatch:
@@ -26,6 +26,8 @@ jobs:
                 User ${{ secrets.SSH_USER }}
                 Port ${{ secrets.SSH_PORT }}
                 IdentityFile ~/.ssh/id_rsa"> ~/.ssh/config
+          echo "Host ${{ secrets.K8S_REMOTE_HOST }}
+                ProxyJump ec_bastion" >> ~/.ssh/config
                 
       - name: Set Kubeconfig
         run: |
@@ -36,7 +38,7 @@ jobs:
         run: |
           ssh -L 6443:127.0.0.1:6443 root@${{ secrets.K8S_REMOTE_HOST }} -f -N
 
-      - name: Отправить уведомление в Slack, если есть ошибки
+      - name: Send notifications in Slack, if there are errors
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
