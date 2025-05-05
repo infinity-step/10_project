@@ -4,8 +4,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-pods:
+  check_pods:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
             exit 1
           fi
 
-      - name: Отправка уведомления в Slack при ошибке
+      - name: Send notifications in Slack while error
         if: failure()
         uses: ravsamhq/notify-slack-action@v2
         with:
