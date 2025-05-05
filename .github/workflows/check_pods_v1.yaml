@@ -1,4 +1,4 @@
-name: Check pods status Kubernetes v2
+name: Check pods status Kubernetes
 
 on:
   workflow_dispatch:
