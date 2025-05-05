@@ -24,8 +24,7 @@ jobs:
           echo "Host ec_bastion
                 HostName ${{ secrets.SSH_PROXY_HOST }}
                 User ${{ secrets.SSH_USER }}
-                Port ${{ secrets.SSH_PORT }}
-                IdentityFile ~/.ssh/id_rsa"> ~/.ssh/config
+                Port ${{ secrets.SSH_PORT }}"> ~/.ssh/config
           echo "Host ${{ secrets.K8S_REMOTE_HOST }}
                 ProxyJump ec_bastion" >> ~/.ssh/config
           cat ~/.ssh/config
@@ -37,8 +36,7 @@ jobs:
       
       - name: Set tunnel
         run: |
-          ssh-keyscan ${{ secrets.K8S_REMOTE_HOST }} >> ~/.ssh/known_hosts
-          ssh -L 6443:127.0.0.1:6443 root@${{ secrets.K8S_REMOTE_HOST }} -f -N
+          ssh -o StrictHostKeyChecking=no -L 6443:127.0.0.1:6443 root@${{ secrets.K8S_REMOTE_HOST }} -f -N
 
       - name: Send notifications in Slack, if there are errors
         env:
