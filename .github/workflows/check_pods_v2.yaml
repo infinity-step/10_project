@@ -27,12 +27,6 @@ jobs:
                 Port ${{ secrets.SSH_PORT }}"> ~/.ssh/config
           echo "Host ${{ secrets.K8S_REMOTE_HOST }}
                 ProxyJump ec_bastion" >> ~/.ssh/config
-                
-      - name: Set Kubeconfig
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=kubeconfig.yaml
-          export | grep KUBECONFIG
       
       - name: Set tunnel
         run: |
@@ -47,7 +41,6 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
           export KUBECONFIG=kubeconfig.yaml
           ERRORS=$(kubectl get pods -A --no-headers | awk '$4!="Running" {print $0}')
-          echo $ERRORS
           if [[ ! -z "$ERRORS" ]]; then
             curl -X POST -H 'Content-type: application/json' --data "{\"text\":\"Обнаружены проблемы с подами:\n$ERRORS\"}" $SLACK_WEBHOOK_URL
           fi
