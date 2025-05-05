@@ -1,0 +1,49 @@
+name: Check pods status Kubernetes
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-pods:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'latest'
+          
+     - name: Set SSH through proxy server
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "Host ec_bastion
+                HostName ${{ secrets.SSH_PROXY_HOST }}
+                User ${{ secrets.SSH_USER }}
+                Port ${{ secrets.SSH_PORT }}
+                IdentityFile ~/.ssh/id_rsa
+                Host ${{ secrets.K8S_REMOTE_HOST }}
+                ProxyJump ec_bastion" > ~/.ssh/config
+
+      - name: Check pods status
+        id: check-pods
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.K8S_REMOTE_HOST }} 'kubectl get pods -A' > pod_status.txt
+          if grep -q 'CrashLoopBackOff\|Error' pod_status.txt; then
+            echo "Pods in error state!"
+            exit 1
+          fi
+
+      - name: Отправка уведомления в Slack при ошибке
+        if: failure()
+        uses: ravsamhq/notify-slack-action@v2
+        with:
+          status: ${{ job.status }}
+          notification_title: "Ошибка в {workflow}"
+          message_format: "{emoji} *{workflow}* завершился с ошибкой в <{repo_url}|{repo}>"
+          footer: "Подробнее: <{workflow_url}|Просмотр Workflow>"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
